@@ -65,7 +65,26 @@ gulp.task('serve:prod', ['build'], () => {
 });
 
 gulp.task('serve:dev', ['watch'], () => {
-	var bs;
+	const bs = () => {
+		const delay = 300; // time in milliseconds between server start/restart and browser-sync start/reload
+		const name = 'bs';
+		setTimeout(() => {
+			if (browserSync.has(name)) {
+				browserSync.get(name).reload();
+			}
+			else {
+				browserSync.create(name).init({
+					proxy: `http://localhost:${PORT}`,
+					files: [
+						'dist/scripts/*.js',
+						'dist/static/**/*',
+						'dist/styles/*.css',
+					],
+					ghostMode: false,
+				});
+			}
+		}, delay);
+	};
 	nodemon({
 		script: 'dist/server.js',
 		watch: 'dist/server.js',
@@ -73,39 +92,18 @@ gulp.task('serve:dev', ['watch'], () => {
 	})
 		.on('start', () => {
 			console.log('server has started');
-			if (!bs) {
-				bs = browserSync.create();
-
-				setTimeout(() => {
-					bs.init({
-						proxy: `http://localhost:${PORT}`,
-						files: [
-							'dist/scripts/*.js',
-							'dist/static/**/*',
-							'dist/styles/*.css',
-						],
-						ghostMode: false,
-					});
-				}, 300);
-
-				/*
-				 NOTE
-				 The timeout is to give the server a chance to start listening
-				 after the nodemon process has started
-				 but before browser-sync starts to proxy.
-				 */
-			}
-		})
-		.on('quit', () => {
-			console.log('server has quit');
-			process.exit();
+			bs();
 		})
 		.on('restart', (files) => {
 			console.log('server has restarted due to changes in files:');
 			for (let file of files) {
 				console.log(file);
 			}
-			bs.reload();
+			bs();
+		})
+		.on('quit', () => {
+			console.log('server has quit');
+			process.exit();
 		})
 	;
 });

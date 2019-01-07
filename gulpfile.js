@@ -70,21 +70,30 @@ gulp.task('serve:dev', ['watch'], () => {
 		script: 'dist/server.js',
 		watch: 'dist/server.js',
 		ext: 'js json',
-		delay: 1000,
 	})
 		.on('start', () => {
 			console.log('server has started');
 			if (!bs) {
 				bs = browserSync.create();
-				bs.init({
-					proxy: `http://localhost:${PORT}`,
-					files: [
-						'dist/scripts/*.js',
-						'dist/static/**/*',
-						'dist/styles/*.css',
-					],
-					ghostMode: false,
-				});
+
+				setTimeout(() => {
+					bs.init({
+						proxy: `http://localhost:${PORT}`,
+						files: [
+							'dist/scripts/*.js',
+							'dist/static/**/*',
+							'dist/styles/*.css',
+						],
+						ghostMode: false,
+					});
+				}, 300);
+
+				/*
+				 NOTE
+				 The timeout is to give the server a chance to start listening
+				 after the nodemon process has started
+				 but before browser-sync starts to proxy.
+				 */
 			}
 		})
 		.on('quit', () => {

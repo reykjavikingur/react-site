@@ -9,17 +9,17 @@ const nodeExternals = require('webpack-node-externals');
 const sass = require('gulp-sass');
 const sourcemaps = require('gulp-sourcemaps');
 
-const PORT = parseInt(process.env.PORT) || 4020;
+const DEFAULT_PORT = 4020;
 
 const PROD = (process.env.NODE_ENV === 'production');
 
 const compiler = webpack([
 	{
 		mode: PROD ? 'production' : 'development',
-		entry: './src/scripts/index.js',
+		entry: './src/scripts/main.js',
 		output: {
 			path: path.resolve(__dirname, 'dist/scripts'),
-			filename: 'bundle.js',
+			filename: 'main.js',
 			publicPath: '/',
 		},
 		module: {
@@ -52,7 +52,7 @@ const compiler = webpack([
 		plugins: [
 			new webpack.DefinePlugin({
 				$dirname: '__dirname',
-				$port: PORT,
+				$defaultPort: DEFAULT_PORT,
 			}),
 		],
 	}
@@ -60,13 +60,16 @@ const compiler = webpack([
 
 gulp.task('start', [PROD ? 'serve:prod' : 'serve:dev']);
 
-gulp.task('serve:prod', ['build'], () => {
+gulp.task('postinstall', PROD ? ['build'] : []);
+
+gulp.task('serve:prod', [], () => {
 	require('./dist/server');
 });
 
 gulp.task('serve:dev', ['watch'], () => {
 	const bs = () => {
-		const delay = 300; // time in milliseconds between server start/restart and browser-sync start/reload
+		const port = parseInt(process.env.PORT) || DEFAULT_PORT;
+		const delay = 250; // time in milliseconds between server start/restart and browser-sync start/reload
 		const name = 'bs';
 		setTimeout(() => {
 			if (browserSync.has(name)) {
@@ -74,7 +77,7 @@ gulp.task('serve:dev', ['watch'], () => {
 			}
 			else {
 				browserSync.create(name).init({
-					proxy: `http://localhost:${PORT}`,
+					proxy: `http://localhost:${port}`,
 					files: [
 						'dist/scripts/*.js',
 						'dist/static/**/*',
@@ -85,24 +88,34 @@ gulp.task('serve:dev', ['watch'], () => {
 			}
 		}, delay);
 	};
+	let listening = false;
 	nodemon({
 		script: 'dist/server.js',
 		watch: 'dist/server.js',
 		ext: 'js json',
+		stdout: false,
 	})
-		.on('start', () => {
-			console.log('server has started');
-			bs();
-		})
 		.on('restart', (files) => {
-			console.log('server has restarted due to changes in files:');
+			listening = false;
+			console.log('nodemon - restarting due to changes in files');
 			for (let file of files) {
 				console.log(file);
 			}
-			bs();
+		})
+		.on('start', () => {
+			listening = false;
+			console.log('nodemon - starting');
+		})
+		.on('stdout', (stdout) => {
+			if (!listening) {
+				console.log('nodemon - listening');
+				bs();
+				listening = true; // if it was not listening before, now on stdout, it is
+			}
+			process.stdout.write(stdout);
 		})
 		.on('quit', () => {
-			console.log('server has quit');
+			console.log('nodemon - quit');
 			process.exit();
 		})
 	;

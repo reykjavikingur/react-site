@@ -20,7 +20,7 @@ const Html = (props) => {
 			<Route path="/about" component={About}/>
 			<Route component={Lost}/>
 		</Switch>
-		<script type="text/javascript" src="/scripts/bundle.js"></script>
+		<script type="text/javascript" src="/scripts/main.js"></script>
 		</body>
 		</html>
 	);

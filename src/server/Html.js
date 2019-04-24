@@ -10,6 +10,7 @@ const Html = (props) => {
 		<head>
 			<link rel="icon" type="image/png" href="/static/favicon.png"/>
 			<meta charSet="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
 			<title>{props.title}</title>
 			<link rel="stylesheet" href="/styles/design.css"/>
 		</head>

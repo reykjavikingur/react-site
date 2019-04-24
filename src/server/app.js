@@ -1,40 +1,34 @@
 const Koa = require('koa');
-const React = require('react');
-const ReactDOMServer = require('react-dom/server');
-const {StaticRouter} = require('react-router-dom');
-const Router = require('koa-router');
 const logger = require('koa-logger');
-const staticCache = require('koa-static-cache');
+const mount = require('koa-mount');
+const serveStatic = require('koa-static');
 const path = require('path');
-const Html = require('./Html');
+const router = require('./router');
 
-const router = new Router();
+const interceptError = async (ctx, next) => {
+    try {
+        await next();
+    } catch (err) {
+        ctx.status = err.status || 500;
+        ctx.body = 'Internal Server Error';
+        ctx.app.emit('error', err, ctx);
+    }
+};
 
-router.get('*', (ctx) => {
-	ctx.set('Content-Type', 'text/html');
-	const context = {};
-	const html = ReactDOMServer.renderToStaticMarkup(
-		<StaticRouter location={ctx.req.url} context={context}>
-			<Html title="Site"></Html>
-		</StaticRouter>
-	);
-	if (context.url) {
-		ctx.redirect(context.url);
-	}
-	else {
-		if (context.lost) {
-			ctx.status = 404;
-		}
-		ctx.body = html;
-	}
-});
+const reportError = (err, ctx) => {
+    console.log('ERROR:', err.message);
+};
 
 const server = new Koa();
 
-server.use(logger());
-server.use(staticCache(path.resolve($dirname, 'static'), {prefix: '/static'}));
-server.use(staticCache(path.resolve($dirname, 'styles'), {prefix: '/styles'}));
-server.use(staticCache(path.resolve($dirname, 'scripts'), {prefix: '/scripts'}));
-server.use(router.routes());
+server
+    .use(interceptError)
+    .use(logger())
+    .use(mount('/static', serveStatic(path.resolve($dirname, 'static'))))
+    .use(mount('/styles', serveStatic(path.resolve($dirname, 'styles'))))
+    .use(mount('/scripts', serveStatic(path.resolve($dirname, 'scripts'))))
+    .use(router.routes())
+    .on('error', reportError)
+;
 
 module.exports = server;
